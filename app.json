@@ -1,21 +1,26 @@
 {
   "expo": {
-    "name": "Cho-Nong-San-Client",
+    "name": "Chợ Nông Sản",
     "slug": "Cho-Nong-San-Client",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/icon-logo-app.jpg",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.haitrue.ChoNongSanClient",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/icon-logo-app.jpg",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.haitrue.ChoNongSanClient"
     },
     "web": {
       "bundler": "metro",
@@ -36,6 +41,14 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "8c2c5825-7b6e-4da3-9dd3-74b14185dd12"
+      }
     }
   }
 }
