@@ -34,12 +34,13 @@ const OrderDetail = () => {
   const params = useLocalSearchParams();
   const orderId = params.orderId as string;
   const [order, setOrder] = useState<Order | null>(null);
+  const [imageUrls, setImageUrls] = useState<{ [key: number]: string }>({});
 
   useEffect(() => {
     const fetchOrder = async () => {
       try {
         const result = await callApi(
-          `${URL_CONNECT}/api/orders/create-detail/${orderId}`, // Fixed the endpoint
+          `${URL_CONNECT}/api/orders/create-detail/${orderId}`,
           { method: "GET" },
           token
         );
@@ -51,9 +52,38 @@ const OrderDetail = () => {
     fetchOrder();
   }, [token, orderId]);
 
-  // const formatPrice = (price: number) => {
-  //   return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "đ";
-  // };
+  useEffect(() => {
+    const loadImages = async () => {
+      if (order) {
+        const urls: { [key: number]: string } = {};
+        try {
+          for (const item of order.items) {
+            const url = await fetchProductImage(item.product_id);
+            urls[item.product_id] = url;
+          }
+          setImageUrls(urls);
+        } catch (error) {
+          console.error("Lỗi khi tải hình ảnh:", error);
+        }
+      }
+    };
+    loadImages();
+  }, [order]);
+
+  const fetchProductImage = async (productId: number) => {
+    try {
+      const result = await callApi(
+        `${URL_CONNECT}/api/products/${productId}`,
+        { method: "GET" },
+        token
+      );
+      console.log(`${URL_CONNECT}${result.image_url}`);
+      return `${URL_CONNECT}${result.image_url}`;
+    } catch (error) {
+      console.error("Lỗi lấy hình ảnh:", error);
+      return "https://via.placeholder.com/100";
+    }
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -126,7 +156,7 @@ const OrderDetail = () => {
           renderItem={({ item }) => (
             <View className="flex-row items-center bg-gray-50 p-3 rounded-lg mb-2 border border-gray-200">
               <Image
-                source={{ uri: item.image_url || "https://via.placeholder.com/100" }}
+                source={{ uri: imageUrls[item.product_id] || "https://via.placeholder.com/100" }}
                 className="w-16 h-16 rounded-lg"
                 resizeMode="cover"
               />

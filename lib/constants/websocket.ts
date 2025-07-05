@@ -3,12 +3,6 @@ import { URL_CONNECT } from "../constants";
 
 let socket: Socket | null = null;
 
-/**
- * Khởi tạo WebSocket với token và userId.
- * @param token - Token xác thực của người dùng.
- * @param userId - ID của người dùng.
- * @returns Socket - Đối tượng Socket đã được khởi tạo.
- */
 export const initializeSocket = (token: string, userId: string): Socket => {
   if (socket) {
     socket.disconnect();
@@ -21,7 +15,7 @@ export const initializeSocket = (token: string, userId: string): Socket => {
 
   socket.on("connect", () => {
     console.log("Đã kết nối WebSocket với userId:", userId);
-    socket?.emit("join", userId); // Tham gia room với userId
+    socket?.emit("join", userId);
   });
 
   socket.on("connect_error", (error: Error) => {
@@ -32,14 +26,14 @@ export const initializeSocket = (token: string, userId: string): Socket => {
     console.log("Đã ngắt kết nối WebSocket");
   });
 
+  // Lắng nghe sự kiện sản phẩm bị gỡ
+  socket.on("productRemovedByAdmin", (data) => {
+    console.log("Nhận thông báo sản phẩm bị gỡ:", data);
+  });
+
   return socket;
 };
 
-/**
- * Lấy đối tượng Socket hiện tại.
- * @returns Socket - Đối tượng Socket hiện tại.
- * @throws Error - Nếu Socket chưa được khởi tạo.
- */
 export const getSocket = (): Socket => {
   if (!socket) {
     throw new Error("Socket chưa được khởi tạo!");
@@ -47,12 +41,19 @@ export const getSocket = (): Socket => {
   return socket;
 };
 
-/**
- * Ngắt kết nối và xóa đối tượng Socket hiện tại.
- */
 export const disconnectSocket = (): void => {
   if (socket) {
     socket.disconnect();
     socket = null;
+  }
+};
+
+// Hàm mới để gửi thông báo sản phẩm bị gỡ
+export const notifyProductRemoved = (userId: string, productName: string, reason: string) => {
+  if (socket) {
+    socket.emit("productRemovedByAdmin", {
+      userId,
+      message: `Sản phẩm "${productName}" của bạn đã bị gỡ bởi quản trị viên. Lý do: ${reason}`
+    });
   }
 };

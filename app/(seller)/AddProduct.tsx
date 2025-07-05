@@ -37,14 +37,18 @@ export default function AddProduct() {
     address: "",
     image_url: "",
     category_id: undefined,
+    origin_proof_image_url: "", // Thêm trường ảnh giấy phép
+    issued_by: "", // Thêm trường nơi cấp
+    expiry_date: "", // Thêm trường ngày hết hạn
   });
   const [imageUploaded, setImageUploaded] = useState(false);
+  const [originProofUploaded, setOriginProofUploaded] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const router = useRouter();
 
   // State cho địa chỉ
   const [addressState, setAddressState] = useState<AddressState>({
-    province: "Tỉnh Thái Nguyên", // Mặc định là Thái Nguyên
+    province: "Tỉnh Thái Nguyên",
     district: "",
     ward: "",
   });
@@ -57,7 +61,7 @@ export default function AddProduct() {
     ? typedAddressData[addressState.province]?.[addressState.district] || []
     : [];
 
-  // Ghép chuỗi địa chỉ và gán vào newProduct.address (bỏ detailed_address)
+  // Ghép chuỗi địa chỉ
   useEffect(() => {
     const address = `${addressState.ward}, ${addressState.district}, ${addressState.province}`.trim();
     setNewProduct((prev) => ({ ...prev, address }));
@@ -99,12 +103,24 @@ export default function AddProduct() {
       Alert.alert("Lỗi", "Vui lòng tải ảnh sản phẩm!");
       return false;
     }
+    if (!product.origin_proof_image_url) {
+      Alert.alert("Lỗi", "Vui lòng tải ảnh giấy phép!");
+      return false;
+    }
+    if (!product.issued_by.trim()) {
+      Alert.alert("Lỗi", "Vui lòng nhập nơi cấp giấy phép!");
+      return false;
+    }
+    if (!product.expiry_date.trim()) {
+      Alert.alert("Lỗi", "Vui lòng nhập ngày hết hạn!");
+      return false;
+    }
     if (!product.category_id) {
       Alert.alert("Lỗi", "Vui lòng chọn danh mục sản phẩm!");
       return false;
     }
     if (!product.address || !addressState.district || !addressState.ward) {
-      Alert.alert("Lỗi", "Vui lòng chọn đầy đủ thông tin địa chỉ (Quận/Huyện và Phường/Xã)!");
+      Alert.alert("Lỗi", "Vui lòng chọn đầy đủ thông tin địa chỉ!");
       return false;
     }
     return true;
@@ -169,6 +185,65 @@ export default function AddProduct() {
     }
   };
 
+  const handlePickOriginProof = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert("Lỗi", "Bạn cần cấp quyền để truy cập thư viện ảnh!");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const imageUri = result.assets[0].uri;
+        const manipulatedImage = await ImageManipulator.manipulateAsync(
+          imageUri,
+          [{ resize: { width: 300, height: 300 } }],
+          { compress: 0.8 }
+        );
+
+        const fileExtension = manipulatedImage.uri.split(".").pop().toLowerCase();
+        const mimeType = {
+          jpg: "image/jpeg",
+          jpeg: "image/jpeg",
+          png: "image/png",
+        }[fileExtension] || "image/jpeg";
+
+        const formData = new FormData();
+        formData.append("origin_proof_image", {
+          uri: manipulatedImage.uri,
+          type: mimeType,
+          name: `origin_proof_${Date.now()}.${fileExtension}`,
+        } as any);
+
+        const response = await fetch(`${URL_CONNECT}/api/products/upload-origin-proof`, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        const data = await response.json();
+        if (response.ok && data.image_url) {
+          setNewProduct({ ...newProduct, origin_proof_image_url: data.image_url });
+          setOriginProofUploaded(true);
+          Alert.alert("Thành công", "Ảnh giấy phép đã được tải lên!");
+        } else {
+          Alert.alert("Lỗi", data.message || "Không thể tải ảnh lên!");
+        }
+      }
+    } catch (error: any) {
+      Alert.alert("Lỗi", "Đã xảy ra lỗi khi xử lý ảnh: " + error.message);
+    }
+  };
+
   const handleAddProduct = async () => {
     const productToAdd = { ...newProduct, seller_id: user.id };
     if (!validateInputs(productToAdd)) return;
@@ -182,7 +257,6 @@ export default function AddProduct() {
     }
   };
 
-  // Handler cho địa chỉ
   const handleAddressChange = (field: keyof AddressState, value: string) => {
     setAddressState((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
@@ -212,7 +286,7 @@ export default function AddProduct() {
         <InputCustom
           placeholder="Tên cửa hàng"
           value={newProduct.store_name}
-          onChangeText={() => {}} // Không cho chỉnh sửa
+          onChangeText={() => {}}
           editable={false}
         />
       </View>
@@ -239,18 +313,15 @@ export default function AddProduct() {
         />
       </View>
 
-      {/* Phần địa chỉ mới (bỏ ô nhập địa chỉ chi tiết) */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Địa chỉ</Text>
-
-        {/* Province Picker (Không cho phép sửa) */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Tỉnh/Thành phố</Text>
           <View style={[styles.pickerContainer, errors.province ? styles.errorBorder : styles.normalBorder]}>
             <Picker
               selectedValue={addressState.province}
-              onValueChange={() => {}} // Không cho phép thay đổi
-              enabled={false} // Vô hiệu hóa Picker
+              onValueChange={() => {}}
+              enabled={false}
               style={styles.picker}
               itemStyle={styles.pickerItem}
             >
@@ -259,8 +330,6 @@ export default function AddProduct() {
           </View>
           {errors.province && <Text style={styles.errorText}>{errors.province}</Text>}
         </View>
-
-        {/* District Picker */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Quận/Huyện</Text>
           <View style={[styles.pickerContainer, errors.district ? styles.errorBorder : styles.normalBorder, !addressState.province ? styles.disabledBackground : {}]}>
@@ -279,8 +348,6 @@ export default function AddProduct() {
           </View>
           {errors.district && <Text style={styles.errorText}>{errors.district}</Text>}
         </View>
-
-        {/* Ward Picker */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Phường/Xã</Text>
           <View style={[styles.pickerContainer, errors.ward ? styles.errorBorder : styles.normalBorder, !addressState.district ? styles.disabledBackground : {}]}>
@@ -301,7 +368,6 @@ export default function AddProduct() {
         </View>
       </View>
 
-      {/* Dropdown chọn danh mục */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Danh mục sản phẩm</Text>
         <RNPickerSelect
@@ -356,16 +422,59 @@ export default function AddProduct() {
           <InputCustom
             placeholder="Đường dẫn ảnh"
             value={newProduct.image_url}
-            onChangeText={() => {}} // Không cho chỉnh sửa
+            onChangeText={() => {}}
             editable={false}
           />
         </View>
       )}
 
+      <View style={styles.inputGroup}>
+        <RoleButton
+          title="Tải ảnh giấy phép"
+          onPress={handlePickOriginProof}
+          bgColor="purple"
+        />
+      </View>
+
+      {originProofUploaded && newProduct.origin_proof_image_url && (
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Ảnh giấy phép</Text>
+          <Image
+            source={{ uri: `${URL_CONNECT}${newProduct.origin_proof_image_url}` }}
+            style={styles.previewImage}
+          />
+          <InputCustom
+            placeholder="Đường dẫn ảnh giấy phép"
+            value={newProduct.origin_proof_image_url}
+            onChangeText={() => {}}
+            editable={false}
+          />
+        </View>
+      )}
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Nơi cấp</Text>
+        <InputCustom
+          placeholder="Nơi cấp giấy phép"
+          value={newProduct.issued_by}
+          onChangeText={(text) => setNewProduct({ ...newProduct, issued_by: text })}
+        />
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Ngày hết hạn</Text>
+        <InputCustom
+          placeholder="Ngày hết hạn (YYYY-MM-DD)"
+          value={newProduct.expiry_date}
+          onChangeText={(text) => setNewProduct({ ...newProduct, expiry_date: text })}
+          keyboardType="numeric"
+        />
+      </View>
+
       <RoleButton
         title="Thêm sản phẩm"
         onPress={handleAddProduct}
-        disabled={!imageUploaded}
+        disabled={!imageUploaded || !originProofUploaded}
       />
     </ScrollView>
   );
@@ -377,7 +486,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingLeft: 16,
     paddingRight: 16,
-    paddingBottom: 100, // Đảm bảo đủ khoảng trống cho thanh Bottom Navigation
+    paddingBottom: 100,
   },
   title: {
     fontSize: 24,

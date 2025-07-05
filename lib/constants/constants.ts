@@ -22,8 +22,11 @@ export interface Product {
     origin?: string; //,
     points?: number; //,
     image_url?: string; //,
+    origin_proof_image_url?: string; //,
     category_id?: number; //,
     address?: string; //,
+    issued_by?: string; //,
+     expiry_date?: string; //,
 }
 
 export interface Category {

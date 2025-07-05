@@ -9,19 +9,22 @@ import {
   Platform,
   StyleSheet,
   Image,
+  Linking,
 } from "react-native";
 import { callApi } from "@/lib/api/auth";
 import { URL_CONNECT } from "@/lib/constants";
 import { useAuth } from "../../context/AuthContext";
 import { FontAwesome } from "@expo/vector-icons";
-import { useRouter } from "expo-router"; // Thêm useRouter
+import { useRouter } from "expo-router";
+import { formatPrice } from "@/lib/utils";
 
 interface Message {
   id: string;
   text: string;
   createdAt: Date;
   user: { id: number; name: string };
-  products?: any[]; // Thêm trường products để lưu danh sách sản phẩm gợi ý
+  products?: any[];
+  web_info?: any[];
 }
 
 interface ChatbotProps {
@@ -34,7 +37,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ visible, onClose }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const flatListRef = useRef<FlatList>(null);
-  const router = useRouter(); // Khởi tạo router
+  const router = useRouter();
 
   useEffect(() => {
     if (visible) {
@@ -79,13 +82,15 @@ const Chatbot: React.FC<ChatbotProps> = ({ visible, onClose }) => {
         token
       );
 
-      const botMessage: Message = {
+      let botMessage: Message = {
         id: Math.random().toString(),
         text: response.message || "Tôi không hiểu, bạn có thể nói lại không?",
         createdAt: new Date(),
         user: { id: 2, name: "Chatbot" },
-        products: response.products || [], // Lưu danh sách sản phẩm gợi ý
+        products: response.products || [],
+        web_info: response.web_info || [],
       };
+
       setMessages((prev) => [...prev, botMessage]);
     } catch (error: any) {
       const errorMessage: Message = {
@@ -113,19 +118,34 @@ const Chatbot: React.FC<ChatbotProps> = ({ visible, onClose }) => {
       ]}
     >
       <Text style={styles.messageText}>{item.text}</Text>
-      {/* Hiển thị danh sách sản phẩm gợi ý nếu có */}
       {item.products && item.products.length > 0 && (
-        <View >
+        <View>
           {item.products.map((product, index) => (
-            <View key={index} >
-              <Text >
-                - {product.name}: {product.price}đ
+            <View key={index}>
+              <Text>
+                - {product.name}: {formatPrice(product.price)}
               </Text>
               <TouchableOpacity
                 onPress={() => viewProductDetail(product.id)}
                 style={styles.productLink}
               >
                 <Text style={styles.linkText}>Xem sản phẩm tại đây</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      )}
+      {item.web_info && item.web_info.length > 0 && (
+        <View>
+          {item.web_info.map((info, index) => (
+            <View key={index}>
+              <Text style={styles.messageText}>- {info.title}</Text>
+              <Text style={styles.messageText}>{info.snippet}</Text>
+              <TouchableOpacity
+                onPress={() => Linking.openURL(info.link)}
+                style={styles.productLink}
+              >
+                <Text style={styles.linkText}>Xem chi tiết</Text>
               </TouchableOpacity>
             </View>
           ))}
@@ -210,13 +230,12 @@ const styles = StyleSheet.create({
     color: "white",
   },
   closeButton: {
-    backgroundColor: "",
     padding: 8,
     borderRadius: 20,
   },
   messageList: {
     padding: 16,
-    flexGrow: 1, // Đảm bảo FlatList chiếm toàn bộ không gian còn lại
+    flexGrow: 1,
   },
   messageContainer: {
     maxWidth: "80%",
@@ -268,7 +287,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   linkText: {
-    color: "#1E90FF", // Màu xanh dương nổi bật
+    color: "#1E90FF",
     fontSize: 14,
     fontWeight: "bold",
   },

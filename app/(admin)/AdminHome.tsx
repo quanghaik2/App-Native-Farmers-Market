@@ -167,6 +167,13 @@ const AdminHome: React.FC = () => { // Define as Functional Component
           <MaterialIcons name="people-outline" size={20} color="#fff" className="mr-2" />
           <Text className="text-white text-sm font-semibold">Người dùng</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          className="flex-1 py-3 px-2 bg-orange-500 rounded-lg flex-row justify-center items-center shadow active:bg-orange-600"
+          onPress={() => router.push("/(admin)/AdminReportList")}
+        >
+          <MaterialIcons name="list-alt" size={20} color="#fff" className="mr-2" />
+          <Text className="text-white text-sm font-semibold">Báo cáo</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Content Area */}

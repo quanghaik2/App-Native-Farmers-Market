@@ -235,7 +235,7 @@ const Checkout = () => {
           renderItem={({ item }) => (
             <View className="flex-row items-center bg-gray-50 p-3 rounded-lg mb-2 border border-gray-200">
               <Image
-                source={{ uri: item.image_url || "https://via.placeholder.com/100" }}
+                source={{ uri: `${URL_CONNECT}${item.image_url}` || "https://via.placeholder.com/100" }}
                 className="w-16 h-16 rounded-lg"
                 resizeMode="cover"
               />

@@ -3,9 +3,7 @@ import { View, Text, TouchableOpacity } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { useRouter, usePathname } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
-import { callApi } from "../../lib/api/auth";
-import { URL_CONNECT } from "../../lib/constants";
-import { getSocket } from "@/lib/constants/websocket";
+import { useSocket } from "@/lib/constants/SocketContext";
 
 interface NavItem {
   name: string;
@@ -16,46 +14,19 @@ interface NavItem {
 const BottomNavigationSeller: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
-  const { token } = useAuth();
-  const [pendingOrders, setPendingOrders] = useState<number>(0);
-
-  const fetchPendingOrders = async () => {
-    try {
-      const result = await callApi(`${URL_CONNECT}/api/orders/seller/orders/pending`, { method: "GET" }, token);
-      setPendingOrders(result?.length || 0);
-    } catch (error) {
-      console.error("Lỗi lấy đơn hàng đang chờ:", error);
-    }
-  };
-
-  useEffect(() => {
-    fetchPendingOrders();
-  }, [token]);
-
-  // Lắng nghe WebSocket để cập nhật số lượng đơn hàng đang chờ
-  useEffect(() => {
-    const socket = getSocket();
-    socket.on("newOrder", (data) => {
-      console.log("Có đơn hàng mới:", data);
-      fetchPendingOrders(); // Làm mới số lượng đơn hàng đang chờ
-    });
-
-    socket.on("orderStatusUpdated", (data) => {
-      console.log("Trạng thái đơn hàng được cập nhật:", data);
-      fetchPendingOrders(); // Làm mới số lượng đơn hàng đang chờ
-    });
-
-    return () => {
-      socket.off("newOrder");
-      socket.off("orderStatusUpdated");
-    };
-  }, []);
+  const { user } = useAuth();
+  const { hasNewProductNotification } = useSocket();
 
   const navItems: NavItem[] = [
     { name: "Cửa hàng", route: "/(seller)/store-management", icon: "store" },
     { name: "Sản phẩm", route: "/(seller)/ProductManagement", icon: "inventory" },
     { name: "Đơn hàng", route: "/(seller)/OrderManagement", icon: "shopping-bag" },
     { name: "Thống kê", route: "/(seller)/Revenue", icon: "bar-chart" },
+    { 
+      name: "Thông báo", 
+      route: "/(seller)/SellerNotifications", 
+      icon: "notifications" 
+    },
   ];
 
   return (
@@ -74,11 +45,9 @@ const BottomNavigationSeller: React.FC = () => {
                 size={24}
                 color={isActive ? "#F5A623" : "#A0A0A0"}
               />
-              {item.name === "Đơn hàng" && pendingOrders > 0 && (
-                <View className="absolute -top-2 -right-2 bg-red-500 p-[4px] rounded-full justify-center items-center">
-                  <Text className="text-white text-xs font-bold">
-                    {pendingOrders > 99 ? "99+" : pendingOrders}
-                  </Text>
+              {item.name === "Thông báo" && hasNewProductNotification && (
+                <View className="absolute -top-1 -right-1 bg-red-500 rounded-full w-4 h-4 justify-center items-center">
+                  <MaterialIcons name="warning" size={10} color="#fff" />
                 </View>
               )}
             </View>

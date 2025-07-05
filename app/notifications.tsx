@@ -18,7 +18,7 @@ interface Notification {
 
 const Notifications: React.FC = () => {
   const { user, token } = useAuth();
-  const { socket, setHasNewNotification } = useSocket();
+  const { socket, setHasNewProductNotification } = useSocket();
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
@@ -26,7 +26,7 @@ const Notifications: React.FC = () => {
     try {
       const result = await callApi(`${URL_CONNECT}/api/notifications`, { method: "GET" }, token);
       setNotifications(result);
-      setHasNewNotification(false);
+      setHasNewProductNotification(false);
       Toast.show({
         type: "success",
         text1: "Thành công",
